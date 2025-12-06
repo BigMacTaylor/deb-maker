@@ -1,7 +1,7 @@
 # ========================================================================================
 #
 #                                   Deb Maker
-#                          version 1.0.0 by Mac_Taylor
+#                          version 1.0.1 by Mac_Taylor
 #
 # ========================================================================================
 
@@ -10,14 +10,34 @@ import std/os
 import strutils
 import osproc
 
+proc newMessage(title: string, messageText: string) =
+  let dialog = newDialog()
+  dialog.title = title
+  dialog.setModal(true)
+  dialog.defaultSize = (300, 100)
+  dialog.setPosition(WindowPosition.center)
+
+  let contentArea = getContentArea(dialog)
+
+  let label = newLabel(messageText)
+  label.setMargin(20)
+  contentArea.add(label)
+
+  discard dialog.addButton("OK", 1)
+  dialog.defaultResponse = 1
+
+  dialog.showAll()
+  discard dialog.run()
+  dialog.destroy()
+
 proc onExtract(btn: Button, chooser: FileChooserButton) =
   let debFile = getFilename(chooser)
   if debFile == "":
-    echo "error: no file selected"
+    newMessage("Error", "No file selected.")
     return
 
   if not debFile.endsWith(".deb"):
-    echo "error: invalid file"
+    newMessage("Error", "File selected is not Deb.")
     return
 
   var newDeb = debFile
@@ -27,12 +47,12 @@ proc onExtract(btn: Button, chooser: FileChooserButton) =
   if status == 0:
     echo "success"
   else:
-    echo "Command exited with status code: ", status
+    newMessage("Error", "Command exited with status code: " & $status)
 
 proc onCreate(btn: Button, chooser: FileChooserButton) =
   let dir = getFilename(chooser)
   if dir == "":
-    echo "error: no directory selected"
+    newMessage("Error", "No directory selected.")
     return
 
   os.setCurrentDir(dir)
@@ -40,13 +60,12 @@ proc onCreate(btn: Button, chooser: FileChooserButton) =
   if status == 0:
     echo "success"
   else:
-    echo "Command exited with status code: ", status
+    newMessage("Error", "Command exited with status code: " & $status)
 
 proc passwordPromt(): string =
   let dialog = newDialog()
   dialog.title = "Enter Password"
   dialog.setModal(true)
-  #setTransientFor(dialog, window)
   dialog.setPosition(WindowPosition.center)
 
   let contentArea = getContentArea(dialog)
@@ -87,7 +106,7 @@ proc passwordPromt(): string =
 proc onMake(btn: Button, chooser: FileChooserButton) =
   let dir = getFilename(chooser)
   if dir == "":
-    echo "error: no directory selected"
+    newMessage("Error", "No directory selected.")
     return
 
   let password = passwordPromt()
@@ -97,12 +116,20 @@ proc onMake(btn: Button, chooser: FileChooserButton) =
 
   discard execCmd("sudo -k")
   os.setCurrentDir(dir)
-  let cmd = "echo " & password & " | sudo -S make-deb " & dir
-  let status = execCmd(cmd)
+
+  var cmd = "echo " & password & " | sudo -S -v"
+  var status = execCmd(cmd)
+
+  if status != 0:
+    newMessage("Error", "Invalid password.")
+    return
+
+  cmd = "echo " & password & " | sudo -S make-deb " & dir
+  status = execCmd(cmd)
   if status == 0:
     echo "success"
   else:
-    echo "Command exited with status: ", status
+    newMessage("Error", "Command exited with status code: " & $status)
 
 proc closeEvent(window: ApplicationWindow, event: Event, app: Application): bool =
   echo "quitting..."
