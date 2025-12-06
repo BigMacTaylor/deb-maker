@@ -4,7 +4,12 @@ Can be used on prebuilt binaries and scripts
 
 ![deb-maker](https://github.com/BigMacTaylor/deb-maker/blob/main/screenshots/deb-maker.png "Deb Maker")
 
-To install just download the .deb and
+## Installation
+
+### Debian/Ubuntu
+
+To install download the `.deb` file from the [releases page](https://github.com/BigMacTaylor/deb-maker/releases) and
+
 ```bash
-sudo apt install ./deb-maker_1.0.0_amd64.deb
+sudo apt install ./deb-maker_*.deb
 ```
