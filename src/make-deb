@@ -33,8 +33,6 @@ DONT_COPY_CHANGELOG=0
 DONT_SIGN=0
 BUILD_PKG=1
 DISPLAY_HELP=0
-DISPLAY_LICENSE=0
-GENERATE_TEMPLATE_OPTIONS=0
 GENERATE_TEMPLATE_CONTROL=0
 
 SRC_DIRECTORY=""
@@ -67,12 +65,10 @@ Command:
   <source folder> Folder containing a DEBIAN structure.
           *By default it builds a Debian Package.
 
-  -c,     --control   Template of the control file.
-  -o,     --options   Template of the options file.
+  -c,     --create    Create debian package template.
 
   -h,     --help      Display this dialog.
   -v,     --version   Display the current version.
-  -l,     --license   Display the license.
 
 Arguments:
 
@@ -100,27 +96,6 @@ Control File:
 }
 
 
-function PrintLicense {
-    echo "
-Copyright (C) 2014-2016, 2025 Rafael Senties Martinelli
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License 3 as published by
-the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software Foundation,
-Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA.
-"
-}
-
-
-
 function PrintSha {
     #
     # This function takes as argument the absolute path of a file
@@ -142,28 +117,6 @@ function PrintSha {
 
 }
 
-function GenTemplateOptions {
-    echo "
-#
-# This is a build-deb options file: https://codeberg.org/rsm92/build-deb
-# It the way of building packages. Empty options are ignored.
-#
-
-# Default arguments separated by spaces
-Arguments:
-
-# Add the package to a reprepro repository
-RepositoryLocation:
-CodeName:
-
-# Copy the changelog somewhere
-CopyChangelog:
-
-# Destination folder when creating Tar.gz packages
-TarGzLocation:
-        " > "BUILD_DEB"
-}
-
 
 function GenTemplateControl {
 
@@ -181,19 +134,77 @@ function GenTemplateControl {
         echo "Package: my-deb
 Version: 1.0.0
 Architecture: all
-Maintainer: name <email>
+Maintainer: Your Name <you@example.com>
 Depends: dpkg (>= 1.0), libc6
 Installed-Size: DEB_BUILDER_SIZE
 Section: misc
 Priority: optional
-Homepage: https://codeberg.org/rsm92/build-deb
+Homepage: https://github.com/BigMacTaylor/deb-maker
 Description: Here you put a 1 line description, Less than 80 chars
  Here you put a long description...
  .
  The point makes an empty line between the first paragraph and this one...
 " > "my-deb/DEBIAN/control"
     fi
+
+    if ! [ -d "my-deb/usr/share/doc/my-deb" ]; then
+        mkdir -p "my-deb/usr/share/doc/my-deb"
+    fi
+
+    if [ -f "my-deb/usr/share/doc/my-deb/copyright" ]; then
+        echo "The copyright file already exists."
+    else
+        echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: deb-maker
+Source: https://github.com/BigMacTaylor/deb-maker
+
+Files:     debian/*
+Copyright: 2026 Your Name <you@example.com>
+License:   GPL-3+
+
+Files:     *
+Copyright: 2026 Your Name <you@example.com>
+License:   MIT
+
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+Comment:
+ On Debian systems, the full text of the GNU General Public License
+ version 3 can be found in the file '/usr/share/common-licenses/GPL-3'.
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the Software), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+" > "my-deb/usr/share/doc/my-deb/copyright"
+    fi
 }
+
 
 function ProcessCMDArg {
     case "$1" in
@@ -227,6 +238,7 @@ function ProcessCMDArg {
     esac
 }
 
+
 function ScanCmdArgs {
     #
     #   Scan the arguments provided by the command line
@@ -238,20 +250,13 @@ function ScanCmdArgs {
     fi
 
     if  [[ "$1" == "-c" ]]              ||
-        [[ "$1" == "--control" ]]       ||
-        [[ "$1" == "-l" ]]              ||
-        [[ "$1" == "--license" ]]       ||
+        [[ "$1" == "--create" ]]        ||
         [[ "$1" == "-v" ]]              ||
         [[ "$1" == "--version" ]]       ||
         [[ "$1" == "-h" ]]              ||
-        [[ "$1" == "--options" ]]       ||
-        [[ "$1" == "-o" ]]              ||
         [[ "$1" == "--help" ]]
     then
         case "$1" in
-            -l|--license)
-                DISPLAY_LICENSE=1
-        ;;
             -h|--help)
                 DISPLAY_HELP=1
         ;;
@@ -259,11 +264,8 @@ function ScanCmdArgs {
                 echo "Version $_VERSION"
                 exit
         ;;
-            -c|--control)
+            -c|--create)
                 GENERATE_TEMPLATE_CONTROL=1
-        ;;
-            -o|--options)
-                GENERATE_TEMPLATE_OPTIONS=1
         esac
         BUILD_PKG=0
     else
@@ -294,126 +296,6 @@ function ScanCmdArgs {
         fi
         i=$((i+1))
     done
-
-}
-
-function ScanOptionsFile {
-    #
-    #   Scan the options defined in the BUILD_DEB file
-    #
-    if ! [ -f "$SRC_DIRECTORY"/BUILD_DEB ]; then
-        DONT_COPY_CHANGELOG=1
-        DONT_ADD_TO_REPREPRO=1
-        return
-    fi
-
-    local file_line;
-
-    #   Check for the option "arguments"
-    #
-    while read -r file_line; do
-        if [[ "$file_line" == "Arguments"* ]] ; then
-            local args_str=${file_line#*:}
-            local args_array=($args_str) # DO NOT ADD QUOTES HERE
-            for arg in "${args_array[@]}"; do
-                ProcessCMDArg "$arg"
-            done
-            break
-        fi
-    done < "$SRC_DIRECTORY"/BUILD_DEB
-
-    #   Check for the option "add to reprepro"
-    #
-    if [ $DONT_ADD_TO_REPREPRO -eq 0 ]; then
-
-        while read -r file_line; do
-            if [[ "$file_line" == "RepositoryLocation:"* ]] ; then
-                REPO_DIRECTORY=${file_line#*:}
-                REPO_DIRECTORY=$(echo "$REPO_DIRECTORY" | sed 's:/*$::') # remove the ending slashes
-                REPO_DIRECTORY=${REPO_DIRECTORY// } # remove trailing spaces
-
-            elif [[ "$file_line" == "CodeName:"* ]] ; then
-                REPO_CODENAME=${file_line#*:}
-                REPO_CODENAME=${REPO_CODENAME// } # remove trailing spaces
-            fi
-
-        done < "$SRC_DIRECTORY"/BUILD_DEB
-
-        if [[ -z "$REPO_DIRECTORY" ]]; then
-            DONT_ADD_TO_REPREPRO=1
-
-        else
-            if ! [ -d "$REPO_DIRECTORY" ]; then
-                echo -e "$_COLOR_RED The RepositoryLocation is not a directory.$_COLOR_RESET"
-                echo "$REPO_DIRECTORY"
-                echo ""
-                DONT_ADD_TO_REPREPRO=1
-
-            elif ! [ -d "$REPO_DIRECTORY"/conf ]; then
-                echo -e "$_COLOR_RED The RepositoryLocation is not a valid reprepro repository. $_COLOR_RESET"
-                echo "$REPO_DIRECTORY"
-                echo ""
-                DONT_ADD_TO_REPREPRO=1
-
-            elif [ -z "$REPO_CODENAME" ]; then
-                echo -e "$_COLOR_RED The CodeName of the reprepro repository is missing. $_COLOR_RESET"
-                echo ""
-                DONT_ADD_TO_REPREPRO=1
-            fi
-
-        fi
-    fi
-
-    #   Check for the option "copy the changelog"
-    #
-    if [ $DONT_COPY_CHANGELOG -eq 0 ]; then
-
-        while read -r file_line; do
-            if [[ "$file_line" == "CopyChangelog:"* ]] ; then
-                CHANGELOG_PASTE_DIR=${file_line#*:}
-                CHANGELOG_PASTE_DIR=$(echo "$CHANGELOG_PASTE_DIR" | sed 's:/*$::') # remove the ending slashes
-                CHANGELOG_PASTE_DIR=${CHANGELOG_PASTE_DIR// } # remove trailing spaces
-                break
-            fi
-        done < "$SRC_DIRECTORY"/BUILD_DEB
-
-        if  [ -z "$CHANGELOG_PASTE_DIR" ]; then
-            DONT_COPY_CHANGELOG=1
-
-        else
-            if ! [ -d "$CHANGELOG_PASTE_DIR" ]; then
-                DONT_COPY_CHANGELOG=1
-                echo -e "$_COLOR_RED The path to paste the changelog doesn't exists. It will not be created.$_COLOR_RESET"
-                echo "$CHANGELOG_PASTE_DIR"
-                echo ""
-            else
-                DONT_COPY_CHANGELOG=0
-            fi
-        fi
-    fi
-
-    #   TarGz location
-    #
-    local new_tgz_dir
-
-    while read -r file_line; do
-        if [[ "$file_line" == "TarGzLocation:"* ]] ; then
-            new_tgz_dir=${file_line#*:}
-            new_tgz_dir=$(echo "$new_tgz_dir" | sed 's:/*$::') # remove the ending slashes
-            new_tgz_dir=${new_tgz_dir// } # remove trailing spaces
-            break
-        fi
-    done < "$SRC_DIRECTORY"/BUILD_DEB
-
-    if [[ -n "$new_tgz_dir" ]]; then
-        if [ -d "$new_tgz_dir" ]; then
-           TARGZ_DIR=new_tgz_dir
-        else
-            echo -e "$_COLOR_RED The directory of the TarGz package doesn't exists. $_COLOR_RESET"
-            echo "$new_tgz_dir"
-            exit 1
-        fi
-    fi
 
 }
 
@@ -650,6 +532,7 @@ function SrcChmod {
 
 }
 
+
 function SrcCompress {
 
     echo -e "\n$_COLOR_BLUE Compressing manuals...$_COLOR_RESET"
@@ -725,6 +608,7 @@ function SrcReplaceGlobal {
 
 }
 
+
 function SrcFillControlFile {
     echo -e "\n$_COLOR_BLUE Filling the control file...$_COLOR_RESET"
 
@@ -740,6 +624,7 @@ function SrcFillControlFile {
     echo -e "Installed-Size: $pkg_size kB"
     sed -i "s/DEB_BUILDER_SIZE/$pkg_size/g" "$SRC_TMP_DIRECTORY"/DEBIAN/control
 }
+
 
 function BuildPkgDeb {
 
@@ -812,7 +697,6 @@ function BuildPkgs {
     #
     SRC_PARENT_DIR=$(dirname "$SRC_DIRECTORY")
     TARGZ_DIR=$SRC_PARENT_DIR
-    ScanOptionsFile
 
     ScanControlFile
     PKG_BASENAME="$PKG_NAME"_"$PKG_VERSION"_"$PKG_ARCHITECTURE"
@@ -846,22 +730,13 @@ function BuildPkgs {
 
 }
 
+
 function Main {
 
     ScanCmdArgs "$@"
 
     if [ $DISPLAY_HELP -eq 1 ]; then
         PrintHelp
-        exit 0
-    fi
-
-    if [ $DISPLAY_LICENSE -eq 1 ]; then
-        PrintLicense
-        exit 0
-    fi
-
-    if [ $GENERATE_TEMPLATE_OPTIONS -eq 1 ]; then
-        GenTemplateOptions
         exit 0
     fi
 
