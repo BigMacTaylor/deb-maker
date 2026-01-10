@@ -147,11 +147,11 @@ Description: Here you put a 1 line description, Less than 80 chars
 " > "my-deb/DEBIAN/control"
     fi
 
-    if ! [ -d "my-deb/usr/share/doc/my-deb" ]; then
-        mkdir -p "my-deb/usr/share/doc/my-deb"
+    if ! [ -d "my-deb/usr/share/doc/MY_DEB" ]; then
+        mkdir -p "my-deb/usr/share/doc/MY_DEB"
     fi
 
-    if [ -f "my-deb/usr/share/doc/my-deb/copyright" ]; then
+    if [ -f "my-deb/usr/share/doc/MY_DEB/copyright" ]; then
         echo "The copyright file already exists."
     else
         echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
@@ -201,7 +201,7 @@ License: MIT
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
-" > "my-deb/usr/share/doc/my-deb/copyright"
+" > "my-deb/usr/share/doc/MY_DEB/copyright"
     fi
 }
 
@@ -384,6 +384,12 @@ function SrcCopy {
         echo -e "$_COLOR_RED Critical error: Some error happened while copying the project. $_COLOR_RESET"
         echo "$SRC_TMP_DIRECTORY"
         exit 1
+    fi
+
+    if ! [ -d "$SRC_TMP_DIRECTORY/usr/share/doc/$PKG_NAME" ]; then
+        if [ -d "$SRC_TMP_DIRECTORY/usr/share/doc/MY_DEB" ]; then
+            mv "$SRC_TMP_DIRECTORY/usr/share/doc/MY_DEB" "$SRC_TMP_DIRECTORY/usr/share/doc/$PKG_NAME"
+        fi
     fi
 
 }
