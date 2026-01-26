@@ -1,7 +1,7 @@
 # ========================================================================================
 #
 #                                   Deb Maker
-#                          version 1.0.3 by Mac_Taylor
+#                          version 1.0.4 by Mac_Taylor
 #
 # ========================================================================================
 
@@ -176,19 +176,22 @@ proc appActivate(app: Application) =
 
   d.window = newApplicationWindow(app)
   d.window.title = "Deb Maker"
-  d.window.defaultSize = (500, 400)
+  d.window.defaultSize = (360, 360)
 
   let headerBar = newHeaderBar()
   headerBar.title = "Deb Maker"
   headerBar.showCloseButton = true
   headerBar.decorationLayout = ":close"
 
-  let mainBox = newBox(Orientation.vertical)
+  let scrolled = newScrolledWindow()
 
   let grid = newGrid()
   grid.setRowSpacing(10)
   grid.setColumnSpacing(10)
-  grid.setMargin(40)
+  grid.marginTop = 30
+  grid.marginBottom = 50
+  grid.marginStart = 50
+  grid.marginEnd = 50
   grid.halign = Align.center
 
   let extractLabel = newLabel("Extract Deb")
@@ -224,9 +227,9 @@ proc appActivate(app: Application) =
   createButton.connect("clicked", onCreate, d)
   makeButton.connect("clicked", onMake, d)
 
-  mainBox.add(grid)
+  scrolled.add(grid)
 
-  d.window.add(mainBox)
+  d.window.add(scrolled)
   d.window.setTitlebar(headerBar)
   d.window.connect("delete-event", closeEvent, app)
 
