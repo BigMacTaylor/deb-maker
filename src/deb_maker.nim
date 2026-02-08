@@ -7,14 +7,17 @@
 
 import nim2gtk/[gtk, glib, gdk, gobject, gio]
 import std/os
-import strutils
 import osproc
+import strutils
 
 type DebWin = ref object
   window: ApplicationWindow
   extractChooser: FileChooserButton
   createChooser: FileChooserButton
   makeChooser: FileChooserButton
+  debDir, debFile: string
+
+var d = new(DebWin)
 
 proc errorMsg(d: DebWin, messageText: string) =
   let dialog = newDialog()
@@ -48,14 +51,21 @@ proc errorMsg(d: DebWin, messageText: string) =
   discard dialog.run()
   dialog.destroy()
 
+proc isDebFile(filePath: string): bool =
+  let (output, exitCode) = execCmdEx("file -b " & filePath)
+  if exitCode == 0 and "Debian binary package" in output:
+    return true
+  else:
+    return false
+
 proc onExtract(btn: Button, d: DebWin) =
   let debFile = getFilename(d.extractChooser)
   if debFile == "":
     d.errorMsg("No file selected.")
     return
 
-  if not debFile.endsWith(".deb"):
-    d.errorMsg("File selected is not Deb.")
+  if not debFile.isDebFile():
+    d.errorMsg("File is not a valid .deb package.")
     return
 
   var newDeb = debFile
@@ -168,22 +178,20 @@ proc closeEvent(window: ApplicationWindow, event: Event, app: Application): bool
   echo "quitting..."
   quit(app)
 
-proc appStartup(app: Application) =
-  echo "appStartup"
-
 proc appActivate(app: Application) =
-  var d = new(DebWin)
-
   d.window = newApplicationWindow(app)
   d.window.title = "Deb Maker"
-  d.window.defaultSize = (360, 360)
+  d.window.defaultSize = (400, 340)
+  d.window.resizable = false
 
   let headerBar = newHeaderBar()
   headerBar.title = "Deb Maker"
   headerBar.showCloseButton = true
   headerBar.decorationLayout = ":close"
 
-  let scrolled = newScrolledWindow()
+  let frame = newFrame()
+
+  let scrollBox = newScrolledWindow()
 
   let grid = newGrid()
   grid.setRowSpacing(10)
@@ -196,6 +204,9 @@ proc appActivate(app: Application) =
 
   let extractLabel = newLabel("Extract Deb")
   d.extractChooser = newFileChooserButton("Select File", FileChooserAction.open)
+  if d.debFile != "":
+    discard d.extractChooser.setFileName(d.debFile)
+
   let extractButton = newButton("Extract")
   grid.attach(extractLabel, 0, 0, 2, 1)
   grid.attach(d.extractChooser, 0, 1, 2, 1)
@@ -207,6 +218,7 @@ proc appActivate(app: Application) =
   let createLabel = newLabel("Create template")
   d.createChooser =
     newFileChooserButton("Select Directory", FileChooserAction.selectFolder)
+
   let createButton = newButton("Create")
   grid.attach(createLabel, 0, 3, 2, 1)
   grid.attach(d.createChooser, 0, 4, 2, 1)
@@ -218,6 +230,9 @@ proc appActivate(app: Application) =
   let makeLabel = newLabel("Make Deb")
   d.makeChooser =
     newFileChooserButton("Select Directory", FileChooserAction.selectFolder)
+  if d.debDir != "":
+    discard d.makeChooser.setFileName(d.debDir)
+
   let makeButton = newButton("Make")
   grid.attach(makeLabel, 0, 6, 2, 1)
   grid.attach(d.makeChooser, 0, 7, 2, 1)
@@ -227,18 +242,32 @@ proc appActivate(app: Application) =
   createButton.connect("clicked", onCreate, d)
   makeButton.connect("clicked", onMake, d)
 
-  scrolled.add(grid)
+  scrollBox.add(grid)
+  frame.add(scrollBox)
 
-  d.window.add(scrolled)
+  d.window.add(frame)
   d.window.setTitlebar(headerBar)
   d.window.connect("delete-event", closeEvent, app)
 
   d.window.showAll()
 
 proc main() =
+  if paramCount() > 1:
+    echo "Error: too many parameters"
+    quit(0)
+  elif paramCount() == 1:
+    if fileExists(paramStr(1)):
+      if isDebFile(paramStr(1)):
+        d.debFile = paramStr(1)
+      else:
+        echo "Error: file is not a valid .deb package."
+    elif dirExists(paramStr(1)):
+      d.debDir = paramStr(1)
+    else:
+      echo "Error: invalid parameter"
+
   let app = newApplication("org.gtk.deb_maker", {ApplicationFlag.nonUnique})
-  connect(app, "startup", appStartup)
-  connect(app, "activate", appActivate)
+  app.connect("activate", appActivate)
   discard app.run()
 
 when isMainModule:
