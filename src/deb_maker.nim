@@ -191,7 +191,7 @@ proc closeEvent(window: ApplicationWindow, event: Event, app: Application): bool
 proc appActivate(app: Application) =
   d.window = newApplicationWindow(app)
   d.window.title = "Deb Maker"
-  d.window.defaultSize = (400, 340)
+  d.window.defaultSize = (400, 360)
   d.window.resizable = false
 
   let headerBar = newHeaderBar()
