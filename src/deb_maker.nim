@@ -70,6 +70,11 @@ proc onExtract(btn: Button, d: DebWin) =
 
   var newDeb = debFile
   removeSuffix(newDeb, ".deb")
+
+  if fileExists(newDeb) or dirExists(newDeb):
+    d.errorMsg("Output path already exists.")
+    return
+
   let cmd = "dpkg-deb -R " & debFile & " " & newDeb
   let status = execCmd(cmd)
   if status == 0:
@@ -81,6 +86,10 @@ proc onCreate(btn: Button, d: DebWin) =
   let dir = getFilename(d.createChooser)
   if dir == "":
     d.errorMsg("No directory selected.")
+    return
+
+  if dirExists("my-deb"):
+    d.errorMsg("Directory 'my-deb' already exists.")
     return
 
   os.setCurrentDir(dir)
