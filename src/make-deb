@@ -26,14 +26,11 @@ _COLOR_RESET="\e[0m"
 _COLOR_BLUE="\e[94m"
 
 INSTALL=0
-DONT_REPLACE_GLOBAL_VARIABLES=0
-FORCE_REPREPRO=0
-DONT_ADD_TO_REPREPRO=0
 DONT_COPY_CHANGELOG=0
 DONT_SIGN=0
 BUILD_PKG=1
 DISPLAY_HELP=0
-GENERATE_TEMPLATE_CONTROL=0
+GENERATE_TEMPLATE=0
 
 SRC_DIRECTORY=""
 SRC_PARENT_DIR=""
@@ -51,8 +48,6 @@ PKG_TARGZ_PATH=""
 CHANGELOG_PASTE_DIR=""
 
 TARGZ_DIR=""
-REPO_DIRECTORY=""
-REPO_CODENAME=""
 
 
 function PrintHelp {
@@ -73,10 +68,7 @@ Command:
 Arguments:
 
   -i,         --install
-  -drgv,      --dont-replace-global-variables
   -dcpc,      --dont-copy-changelog
-  -frepo,     --force-reprepro
-  -drepo,     --dont-add-reprepro
   -tgz,       --targz
   -deb-tgz,   --debian-targz
   -ds,        --dont-sign
@@ -118,7 +110,7 @@ function PrintSha {
 }
 
 
-function GenTemplateControl {
+function GenTemplate {
 
     if ! [ -d "my-deb/usr/bin" ]; then
         mkdir -p "my-deb/usr/bin"
@@ -211,17 +203,8 @@ function ProcessCMDArg {
         -i|--install)
             INSTALL=1
     ;;
-        -drgv|--dont-replace-global-variables)
-            DONT_REPLACE_GLOBAL_VARIABLES=1
-    ;;
         -dcpc|--dont-copy-changelog)
             DONT_COPY_CHANGELOG=1
-    ;;
-        -frepo|--force-reprepro)
-            FORCE_REPREPRO=1
-    ;;
-        -drepo|--dont-add-reprepro)
-            DONT_ADD_TO_REPREPRO=1
     ;;
         -ds|--dont-sign)
             DONT_SIGN=1
@@ -265,7 +248,7 @@ function ScanCmdArgs {
                 exit
         ;;
             -c|--create)
-                GENERATE_TEMPLATE_CONTROL=1
+                GENERATE_TEMPLATE=1
         esac
         BUILD_PKG=0
     else
@@ -563,58 +546,6 @@ function SrcCompress {
 }
 
 
-function SrcReplaceGlobal {
-
-    if [ "$DONT_REPLACE_GLOBAL_VARIABLES" -eq 1 ]; then
-        return
-    fi
-
-    # Replace the global variables, change the files permissions and delete the backups
-    #
-    echo -e "\n$_COLOR_BLUE Replacing Global Variables...$_COLOR_RESET"
-
-    local current_year
-    local current_date_time
-    local current_date
-
-    current_year=$(date +"%Y")
-    current_date_time=$(date)
-    current_date=$(date +%Y-%m-%d)
-
-    local file_abs_path
-    local file_local_path
-
-    while read -r file_abs_path; do
-        if [ -f "$file_abs_path" ]; then
-
-            file_local_path=${file_abs_path#"$SRC_DIRECTORY"}
-
-            if grep -q "1.0.0" "$file_abs_path"; then
-                sed -i "s/1.0.0/$PKG_VERSION/g" "$file_abs_path"
-                echo "Version Replaced: $file_local_path"
-            fi
-
-            if grep -q "Tue Dec  2 12:32:04 PM EST 2025" "$file_abs_path"; then
-                sed -i "s/Tue Dec  2 12:32:04 PM EST 2025/$current_date_time/g" "$file_abs_path"
-                echo "Date Time Replaced: $file_local_path"
-            fi
-
-            if grep -q "2025" "$file_abs_path"; then
-                sed -i "s/2025/$current_year/g" "$file_abs_path"
-                echo "Year Replaced: $file_local_path"
-            fi
-
-            if grep -q "2025-12-02" "$file_abs_path"; then
-                sed -i "s/2025-12-02/$current_date/g" "$file_abs_path"
-                echo "Date Replaced: $file_local_path"
-            fi
-
-        fi
-    done <<< "$(find "$SRC_TMP_DIRECTORY")"
-
-}
-
-
 function SrcFillControlFile {
     echo -e "\n$_COLOR_BLUE Filling the control file...$_COLOR_RESET"
 
@@ -656,25 +587,7 @@ function BuildPkgDeb {
         echo -e "\n$_COLOR_BLUE Installing $PKG_DEB_PATH...$_COLOR_RESET"
         dpkg -i "$PKG_DEB_PATH"
     fi
-    
-    # Add the pacakge to reprepro
-    #
-    if [ $DONT_ADD_TO_REPREPRO -eq 0 ]; then
-
-        if [ ! -f /usr/bin/reprepro ]; then
-            echo -e "$_COLOR_RED Error: /usr/bin/reprepro is missing.$_COLOR_RESET"
-
-        else
-            echo -e "$_COLOR_BLUE Adding $PKG_DEB_PATH to the local repository $_COLOR_RESET"
-
-            if [ "$FORCE_REPREPRO" -eq 1 ]; then
-                /usr/bin/reprepro remove "$REPO_CODENAME" "$PKG_NAME"
-            fi
-
-            /usr/bin/reprepro --ask-passphrase -Vb . includedeb "$REPO_CODENAME" "$PKG_DEB_PATH"
-        fi
-    fi
-        
+  
 }
 
 
@@ -714,7 +627,6 @@ function BuildPkgs {
     SrcClean
     SrcChmod
     SrcCompress
-    SrcReplaceGlobal
     SrcFillControlFile
 
     # Build the packages
@@ -746,8 +658,8 @@ function Main {
         exit 0
     fi
 
-    if [ $GENERATE_TEMPLATE_CONTROL -eq 1 ]; then
-        GenTemplateControl
+    if [ $GENERATE_TEMPLATE -eq 1 ]; then
+        GenTemplate
         exit 0
     fi
 
