@@ -88,11 +88,12 @@ proc onCreate(btn: Button, d: DebWin) =
     d.errorMsg("No directory selected.")
     return
 
+  os.setCurrentDir(dir)
+
   if dirExists("my-deb"):
     d.errorMsg("Directory 'my-deb' already exists.")
     return
 
-  os.setCurrentDir(dir)
   let status = execCmd("make-deb -c")
   if status == 0:
     echo "success"
